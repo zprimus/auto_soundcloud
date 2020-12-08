@@ -11,7 +11,14 @@
 import local
 import cloud
 
-try:
-	local.record()
-except ValueError:
-	print('ERROR: Recording failed. Check audio input device.')
+while(True):
+	try:
+		local.listen()
+	except ValueError:
+		print('ERROR: Listening failed. Check audio input device.')
+	
+	try:
+		local.record()
+	except ValueError:
+		print('ERROR: Recording failed. Check audio input device.')
+
