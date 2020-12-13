@@ -13,7 +13,7 @@ sample_format = pyaudio.paInt16  # 16 bits per sample
 channels = 2
 fs = 44100  # Record at 44100 samples per second
 thresholdAmplitude = 10000
-thresholdTime = 10
+thresholdTime = 5
 
 def listen():
 	p = pyaudio.PyAudio()  # Create an interface to PortAudio
@@ -58,7 +58,7 @@ def record():
 	frames = []
 	
 	# init timer variable
-	t1 = 0
+	t1 = time.time()
 
 	# Store data in chunks for 3 seconds
 	while(True):
@@ -70,13 +70,14 @@ def record():
 		if(peak < thresholdAmplitude):
 			# Timer
 			t = time.time()
-			if(t - t1 > thresholdTime + 1):
-				t1 = time.time()
+			#if(t - t1 > thresholdTime + 1):
+				#t1 = time.time()
 			timer_seconds = t - t1
+			print(timer_seconds)
 			if(timer_seconds > thresholdTime):
 				break
 		else:
-			t1 = 0
+			t1 = time.time()
 
 	# Stop and close the stream 
 	stream.stop_stream()
