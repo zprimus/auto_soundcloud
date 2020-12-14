@@ -49,5 +49,7 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
-# Audio files
+# Miscellaneous
 raw/
+credentials.json
+token.pickle
