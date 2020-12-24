@@ -7,57 +7,80 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from tabulate import tabulate
+from googleapiclient.http import MediaFileUpload
 
-SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive.file']
 
-def get_names_of_files():
-	for url in ['https://api.github.com', 'https://www.googleapis.com/drive/v3/files']:
-		try:
-			response = requests.get(url)	
-			
-			response.raise_for_status()
-		except HTTPError as http_err:
-			print(f'HTTP error occurred -> {http_err}')
-		except Exception as err:
-			print(f'Other error occurred -> {err}')
-		else:
-			print('Success!')
-			
-	return
+FOLDER_METADATA = {
+	'name': 'raw',
+	'mimeType': 'application/vnd.google-apps.folder'
+}
 
-def upload_files():
-
-	return
+def upload_files(account):
+	# see if folder already exists on google drive
+	results = account.files().list(pageSize=5, fields="nextPageToken, files(id, name)").execute()
+	items = results.get('files', [])
 	
+	for item in items:
+		id = item["id"]
+		name = item["name"]
+		
+		folderExists = False
+		
+		if(name == FOLDER_METADATA['name']):
+			folderExists = True
+			break
+	
+	if(folderExists):
+		folder_id = id
+	else:
+		file = account.files().create(body=FOLDER_METADATA, fields='id').execute()
+	
+		folder_id = file.get('id')	
+	
+	print('Folder ID: ', folder_id)
+	
+	local_filename = '2020-12-13_18-2-30'
+	local_foldername = 'raw'
+	file_metadata = {
+		'name': local_filename,
+		'parents': [folder_id],
+		'path': local_foldername + '/' + local_filename
+	}
+	
+	media = MediaFileUpload(file_metadata['path'], resumable=True)
+	file = account.files().create(body=file_metadata, media_body=media, fields='id, name').execute()
+	print('File created.')
+	print('File ID: ', file.get('id'))
+	print('File Name: ', file.get('name'))
+
+	return
+
+# authenticate google account
 def get_gdrive_service():
 	creds = None
 	
 	if os.path.exists('token.pickle'):
 		with open('token.pickle', 'rb') as token:
+			print('Authenticating account using token.pickle')
 			creds = pickle.load(token)
 			
 	if not creds or not creds.valid:
 		if creds and creds.expired and creds.refresh_token:
+			print('Refreshing authentication token')
 			creds.refresh(Request())
 		else:
+			print('Authenticating account using credentials.json')
 			flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+			print('Redirecting to google for manual authentication')
 			creds = flow.run_local_server(port=0)
 		with open('token.pickle', 'wb') as token:
+			print('Creating token.pickle')
 			pickle.dump(creds, token)
+	print('Building driver')
 	return build('drive', 'v3', credentials=creds)
-		
-def main():
-	service = get_gdrive_service()
-	
-	results = service.files().list(pageSize=5, fields="nextPageToken, files(id, name, mimeType, size, parents, modifiedTime)").execute()
-	
-	items = results.get('files', [])
-	
-	list_files(items)
-	#print(items)
-	
-	return
-	
+
+# list items in google drive
 def list_files(items):
 	if not items:
 		print('No files found.')
@@ -85,10 +108,26 @@ def list_files(items):
 		
 		table = tabulate(rows, headers=["ID", "Name", "Parents", "Size", "Type", "Modified Time"])
 		print(table)
+	return
+
+# main function
+def main():
+	service = get_gdrive_service()
+	
+	results = service.files().list(pageSize=5, fields="nextPageToken, files(id, name, mimeType, size, parents, modifiedTime)").execute()
+	items = results.get('files', [])
+	list_files(items)
+	
+	upload_files(service)
+	
+	results = service.files().list(pageSize=5, fields="nextPageToken, files(id, name, mimeType, size, parents, modifiedTime)").execute()
+	items = results.get('files', [])
+	list_files(items)
+	
+	return
 
 ##### Main Code #####
-#get_names_of_files()
 try:
 	main()
-except:
-	print('error')
+except Exception as e:
+	print('Error: ', e)
