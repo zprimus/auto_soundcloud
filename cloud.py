@@ -3,6 +3,9 @@ from requests.exceptions import HTTPError
 
 import pickle
 import os
+from time import sleep
+from os import listdir
+from os.path import isfile, join
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -16,12 +19,25 @@ FOLDER_METADATA = {
 	'mimeType': 'application/vnd.google-apps.folder'
 }
 
-def upload_files(account):
-	# see if folder already exists on google drive
-	results = account.files().list(pageSize=5, fields="nextPageToken, files(id, name)").execute()
-	items = results.get('files', [])
+def get_local_files():
+	fileList = [f for f in listdir(FOLDER_METADATA['name']) if isfile(join(FOLDER_METADATA['name'], f))]
 	
-	for item in items:
+	return fileList
+	
+def get_cloud_files(account):
+	results = account.files().list(pageSize=5, fields="nextPageToken, files(id, name, parents)").execute()
+	fileList = results.get('files', [])
+	
+	return fileList
+
+def upload_files(account):
+	# get lists of all files
+	local_file_list = get_local_files()
+	
+	cloud_file_list = get_cloud_files(account)
+	
+	# see if folder already exists on google drive
+	for item in cloud_file_list:
 		id = item["id"]
 		name = item["name"]
 		
@@ -38,21 +54,36 @@ def upload_files(account):
 	
 		folder_id = file.get('id')	
 	
-	print('Folder ID: ', folder_id)
+	# minimize cloud list to the files in the path we care about
+	new_cloud_list = []
+	for item in cloud_file_list:
+		if(item['parents'] == [folder_id]):
+			new_cloud_list.append(item)
 	
-	local_filename = '2020-12-13_18-2-30'
-	local_foldername = 'raw'
-	file_metadata = {
-		'name': local_filename,
-		'parents': [folder_id],
-		'path': local_foldername + '/' + local_filename
-	}
+	# display existing files in the cloud directory
+	list_files(new_cloud_list)
 	
-	media = MediaFileUpload(file_metadata['path'], resumable=True)
-	file = account.files().create(body=file_metadata, media_body=media, fields='id, name').execute()
-	print('File created.')
-	print('File ID: ', file.get('id'))
-	print('File Name: ', file.get('name'))
+	# compare local files to cloud files and upload
+	for local_item_name in local_file_list:
+		fileExists = False
+		
+		for cloud_item in new_cloud_list:
+			if(local_item_name == cloud_item['name']):
+				fileExists = True
+							
+		file_metadata = {
+			'name': local_item_name,
+			'parents': [folder_id],
+			'path': FOLDER_METADATA['name'] + '/' + local_item_name
+		}
+		
+		# upload local file to cloud
+		if(not fileExists):
+			media = MediaFileUpload(file_metadata['path'], resumable=True)
+			file = account.files().create(body=file_metadata, media_body=media, fields='id, name').execute()
+			print('File created.')
+			print('File ID: ', file.get('id'))
+			print('File Name: ', file.get('name'))
 
 	return
 
@@ -94,19 +125,11 @@ def list_files(items):
 				parents = item["parents"]
 			except:
 				parents = "N/A"
-			try:
-				size = get_size_format(int(item["size"]))
-			except:
-				size = "N/A"
 			
-			mime_type = item["mimeType"]
-			
-			modified_time = item["modifiedTime"]
-			
-			rows.append((id, name, parents, size, mime_type, modified_time))
+			rows.append((id, name, parents))
 		print("Files:")
 		
-		table = tabulate(rows, headers=["ID", "Name", "Parents", "Size", "Type", "Modified Time"])
+		table = tabulate(rows, headers=["ID", "Name", "Parents"])
 		print(table)
 	return
 
@@ -114,20 +137,16 @@ def list_files(items):
 def main():
 	service = get_gdrive_service()
 	
-	results = service.files().list(pageSize=5, fields="nextPageToken, files(id, name, mimeType, size, parents, modifiedTime)").execute()
-	items = results.get('files', [])
-	list_files(items)
-	
 	upload_files(service)
-	
-	results = service.files().list(pageSize=5, fields="nextPageToken, files(id, name, mimeType, size, parents, modifiedTime)").execute()
-	items = results.get('files', [])
-	list_files(items)
 	
 	return
 
 ##### Main Code #####
-try:
-	main()
-except Exception as e:
-	print('Error: ', e)
+while(True):
+	try:
+		main()
+	except Exception as e:
+		print('Error: ', e)
+		
+	# run every 5 min
+	sleep(300)
