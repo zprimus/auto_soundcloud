@@ -3,7 +3,7 @@ from requests.exceptions import HTTPError
 
 import pickle
 import os
-from time import sleep
+import time
 from os import listdir
 from os.path import isfile, join
 from googleapiclient.discovery import build
@@ -19,17 +19,20 @@ FOLDER_METADATA = {
 	'mimeType': 'application/vnd.google-apps.folder'
 }
 
+# Store files in local directory
 def get_local_files():
 	fileList = [f for f in listdir(FOLDER_METADATA['name']) if isfile(join(FOLDER_METADATA['name'], f))]
 	
 	return fileList
-	
+
+# Store files from google drive
 def get_cloud_files(account):
 	results = account.files().list(pageSize=5, fields="nextPageToken, files(id, name, parents)").execute()
 	fileList = results.get('files', [])
 	
 	return fileList
 
+# Upload files
 def upload_files(account):
 	# get lists of all files
 	local_file_list = get_local_files()
@@ -135,10 +138,30 @@ def list_files(items):
 
 # main function
 def main():
+	# Authenticate account and receive token
 	service = get_gdrive_service()
 	
-	upload_files(service)
+	# Listen for local changes
+	t = t1 = time.time()
+	list1 = list2 = get_local_files()
 	
+	print('Listening for local changes')
+
+	while(True):
+		if(t - t1 < 5):
+			t = time.time()
+			
+			if(list1 != list2):
+				# Start uploading
+				print('Commencing upload sequence')
+				upload_files(service)
+				print('Listening for local changes')
+		else:
+			# FIFO sequence
+			t1 = time.time()
+			list1 = list2
+			list2 = get_local_files()
+
 	return
 
 ##### Main Code #####
@@ -147,6 +170,3 @@ while(True):
 		main()
 	except Exception as e:
 		print('Error: ', e)
-		
-	# run every 5 min
-	sleep(300)
