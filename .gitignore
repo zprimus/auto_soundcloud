@@ -48,3 +48,8 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+# Miscellaneous
+raw/
+credentials.json
+token.pickle
