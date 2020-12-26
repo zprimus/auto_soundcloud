@@ -1,6 +1,20 @@
+##########################################################################
+# Project: auto_soundcloud                                               #
+#                                                                        #
+# File name: cloud.py                                                    #
+#                                                                        #
+# Creator: zprimus                                                       #
+#                                                                        #
+# Creation date: 12/25/2020                                              #
+#                                                                        #
+# Description: Upload files to google drive directory.                   #
+#                                                                        #
+# Requirements: Microphone, Internet access                              #
+##########################################################################
+
+# dependencies
 import requests
 from requests.exceptions import HTTPError
-
 import pickle
 import os
 import time
@@ -27,7 +41,8 @@ def get_local_files():
 
 # Store files from google drive
 def get_cloud_files(account):
-	results = account.files().list(pageSize=5, fields="nextPageToken, files(id, name, parents)").execute()
+	results = account.files().list(pageSize=1000, fields="nextPageToken, files(id, name, parents)").execute()
+	
 	fileList = results.get('files', [])
 	
 	return fileList
@@ -52,10 +67,14 @@ def upload_files(account):
 	
 	if(folderExists):
 		folder_id = id
+		print('Folder found.')
+		print('Folder ID: ', folder_id)
 	else:
-		file = account.files().create(body=FOLDER_METADATA, fields='id').execute()
+		file = account.files().create(body=FOLDER_METADATA, fields='id, name').execute()
 	
-		folder_id = file.get('id')	
+		folder_id = file.get('id')
+		print('Folder created.')
+		print('Folder ID: ', folder_id)
 	
 	# minimize cloud list to the files in the path we care about
 	new_cloud_list = []
@@ -152,10 +171,16 @@ def main():
 			t = time.time()
 			
 			if(list1 != list2):
+				# Allow for file to be created before uploading
+				time.sleep(5)
+				
 				# Start uploading
 				print('Commencing upload sequence')
 				upload_files(service)
 				print('Listening for local changes')
+				# Reset variables
+				t = t1 = time.time()
+				list1 = list2 = get_local_files()
 		else:
 			# FIFO sequence
 			t1 = time.time()

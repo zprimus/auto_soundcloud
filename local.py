@@ -1,4 +1,16 @@
-# record audio
+##########################################################################
+# Project: auto_soundcloud                                               #
+#                                                                        #
+# File name: local.py                                                    #
+#                                                                        #
+# Creator: zprimus                                                       #
+#                                                                        #
+# Creation date: 12/25/2020                                              #
+#                                                                        #
+# Description: Record live music and save it locally.                    #
+#                                                                        #
+# Requirements: Microphone                                               #
+##########################################################################
 
 # dependencies
 import pyaudio
@@ -33,11 +45,11 @@ def listen():
 	while(peak < thresholdAmplitude):
 	    data = stream.read(chunk)
 	    
-	    dataDecoded = numpy.fromstring(data, dtype=numpy.int16)
+	    dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
 	    peak = numpy.average(numpy.abs(dataDecoded))*2
 	    bars = "|" * int(peak / 1000)
 	    
-	    print(bars)
+	    #print(bars)
 	
 	return
 
@@ -60,20 +72,17 @@ def record():
 	# init timer variable
 	t1 = time.time()
 
-	# Store data in chunks for 3 seconds
+	# Store data in chunks when audio level is higher than threshold
 	while(True):
 		data = stream.read(chunk)
 		frames.append(data)
-		dataDecoded = numpy.fromstring(data, dtype=numpy.int16)
+		dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
 		peak = numpy.average(numpy.abs(dataDecoded))*2
 		
 		if(peak < thresholdAmplitude):
-			# Timer
 			t = time.time()
-			#if(t - t1 > thresholdTime + 1):
-				#t1 = time.time()
 			timer_seconds = t - t1
-			print(timer_seconds)
+			
 			if(timer_seconds > thresholdTime):
 				break
 		else:
@@ -102,3 +111,15 @@ def title_format():
 	titleString = str(currentTime.year) + '-' + str(currentTime.month) + '-' + str(currentTime.day) + '_' + str(currentTime.hour) + '-' + str(currentTime.minute) + '-' + str(currentTime.second)
 	
 	return titleString
+
+##### Main Code ######
+while(True):
+	try:
+		listen()
+	except Exception as e:
+		print('ERROR: ', e)
+	
+	try:
+		record()
+	except Exception as e:
+		print('ERROR: ', e)
