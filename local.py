@@ -24,7 +24,7 @@ chunk = 1024  # Record in chunks of 1024 samples
 sample_format = pyaudio.paInt16  # 16 bits per sample
 channels = 2
 fs = 44100  # Record at 44100 samples per second
-thresholdAmplitude = 10000
+thresholdAmplitude = 1000
 thresholdTime = 5
 
 def listen():
@@ -39,17 +39,16 @@ def listen():
 		        input=True)
 	
 	# initialize peak variable        
-	peak = 0
+	peakAmplitude = 0
 
 	# Continuously listen
-	while(peak < thresholdAmplitude):
+	#while(peakAmplitude < thresholdAmplitude):
+	while(True):
 	    data = stream.read(chunk)
 	    
 	    dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
-	    peak = numpy.average(numpy.abs(dataDecoded))*2
-	    bars = "|" * int(peak / 1000)
-	    
-	    #print(bars)
+	    peakAmplitude = numpy.average(numpy.abs(dataDecoded))*2
+	    bars = "|" * int(peakAmplitude / 1000)
 	
 	return
 
