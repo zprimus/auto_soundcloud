@@ -54,12 +54,12 @@ def upload_files(account):
 	
 	cloud_file_list = get_cloud_files(account)
 	
+	folderExists = False
+	
 	# see if folder already exists on google drive
 	for item in cloud_file_list:
 		id = item["id"]
 		name = item["name"]
-		
-		folderExists = False
 		
 		if(name == FOLDER_METADATA['name']):
 			folderExists = True
