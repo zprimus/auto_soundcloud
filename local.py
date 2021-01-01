@@ -20,6 +20,7 @@ import wave
 import time
 import numpy
 import datetime
+import os
 
 # global variables
 chunk = 1024  # Record in chunks of 1024 samples
@@ -28,6 +29,7 @@ channels = 2
 fs = 44100  # Record at 44100 samples per second
 thresholdAmplitude = 1000
 thresholdTime = 5
+dirFullPath = os.path.dirname(os.path.abspath(__file__))
 
 def listen():
 	p = pyaudio.PyAudio()  # Create an interface to PortAudio
@@ -54,7 +56,7 @@ def listen():
 	return
 
 def record():
-	filePath = 'raw/' + title_format()
+	filePath = dirFullPath + '/raw/' + title_format()
 
 	p = pyaudio.PyAudio()  # Create an interface to PortAudio
 
