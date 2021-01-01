@@ -4,7 +4,7 @@ Automatically upload realtime audio to SoundCloud.
 ## install PyAudio
 sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
 sudo apt-get install ffmpeg
-sudo pip install pyaudio
+sudo pip3 install pyaudio
 
 ## install NumPy
 sudo pip install numpy
