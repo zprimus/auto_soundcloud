@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 ##########################################################################
 # Project: auto_soundcloud                                               #
 #                                                                        #
@@ -42,8 +44,7 @@ def listen():
 	peakAmplitude = 0
 
 	# Continuously listen
-	#while(peakAmplitude < thresholdAmplitude):
-	while(True):
+	while(peakAmplitude < thresholdAmplitude):
 	    data = stream.read(chunk)
 	    
 	    dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
