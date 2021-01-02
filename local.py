@@ -1,4 +1,18 @@
-# record audio
+#!/usr/bin/env python3
+
+##########################################################################
+# Project: auto_soundcloud                                               #
+#                                                                        #
+# File name: local.py                                                    #
+#                                                                        #
+# Creator: zprimus                                                       #
+#                                                                        #
+# Creation date: 12/25/2020                                              #
+#                                                                        #
+# Description: Record live music and save it locally.                    #
+#                                                                        #
+# Requirements: Microphone                                               #
+##########################################################################
 
 # dependencies
 import pyaudio
@@ -6,14 +20,16 @@ import wave
 import time
 import numpy
 import datetime
+import os
 
 # global variables
 chunk = 1024  # Record in chunks of 1024 samples
 sample_format = pyaudio.paInt16  # 16 bits per sample
 channels = 2
 fs = 44100  # Record at 44100 samples per second
-thresholdAmplitude = 10000
+thresholdAmplitude = 1000
 thresholdTime = 5
+dirFullPath = os.path.dirname(os.path.abspath(__file__))
 
 def listen():
 	p = pyaudio.PyAudio()  # Create an interface to PortAudio
@@ -27,22 +43,20 @@ def listen():
 		        input=True)
 	
 	# initialize peak variable        
-	peak = 0
+	peakAmplitude = 0
 
 	# Continuously listen
-	while(peak < thresholdAmplitude):
+	while(peakAmplitude < thresholdAmplitude):
 	    data = stream.read(chunk)
 	    
-	    dataDecoded = numpy.fromstring(data, dtype=numpy.int16)
-	    peak = numpy.average(numpy.abs(dataDecoded))*2
-	    bars = "|" * int(peak / 1000)
-	    
-	    print(bars)
+	    dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
+	    peakAmplitude = numpy.average(numpy.abs(dataDecoded))*2
+	    bars = "|" * int(peakAmplitude / 1000)
 	
 	return
 
 def record():
-	filePath = 'raw/' + title_format()
+	filePath = dirFullPath + '/raw/' + title_format()
 
 	p = pyaudio.PyAudio()  # Create an interface to PortAudio
 
@@ -60,20 +74,17 @@ def record():
 	# init timer variable
 	t1 = time.time()
 
-	# Store data in chunks for 3 seconds
+	# Store data in chunks when audio level is higher than threshold
 	while(True):
 		data = stream.read(chunk)
 		frames.append(data)
-		dataDecoded = numpy.fromstring(data, dtype=numpy.int16)
+		dataDecoded = numpy.frombuffer(data, dtype=numpy.int16)
 		peak = numpy.average(numpy.abs(dataDecoded))*2
 		
 		if(peak < thresholdAmplitude):
-			# Timer
 			t = time.time()
-			#if(t - t1 > thresholdTime + 1):
-				#t1 = time.time()
 			timer_seconds = t - t1
-			print(timer_seconds)
+			
 			if(timer_seconds > thresholdTime):
 				break
 		else:
@@ -102,3 +113,15 @@ def title_format():
 	titleString = str(currentTime.year) + '-' + str(currentTime.month) + '-' + str(currentTime.day) + '_' + str(currentTime.hour) + '-' + str(currentTime.minute) + '-' + str(currentTime.second)
 	
 	return titleString
+
+##### Main Code ######
+while(True):
+	try:
+		listen()
+	except Exception as e:
+		print('ERROR: ', e)
+	
+	try:
+		record()
+	except Exception as e:
+		print('ERROR: ', e)
